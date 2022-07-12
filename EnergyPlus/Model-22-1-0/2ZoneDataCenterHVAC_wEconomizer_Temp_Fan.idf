@@ -3669,7 +3669,7 @@
   Schedule:File,
     elecTDVfromCZ06com,      !- Name
     Any Number,              !- Schedule Type Limits Name
-    ..\datasets\TDV\TDV_2008_kBtu_CTZ06.csv,  !- File Name
+    /root/rl-testbed-for-energyplus/EnergyPlus/datasets/TDV/TDV_2008_kBtu_CTZ06.csv,  !- File Name
     1,                       !- Column Number
     4,                       !- Rows to Skip at Top
     8760,                    !- Number of Hours of Data
@@ -3681,7 +3681,7 @@
   Schedule:File,
     natgasTDVfromCZ06com,    !- Name
     Any Number,              !- Schedule Type Limits Name
-    ..\datasets\TDV\TDV_2008_kBtu_CTZ06.csv,  !- File Name
+    /root/rl-testbed-for-energyplus/EnergyPlus/datasets/TDV/TDV_2008_kBtu_CTZ06.csv,  !- File Name
     3,                       !- Column Number
     4,                       !- Rows to Skip at Top
     8760,                    !- Number of Hours of Data

@@ -2,6 +2,7 @@
 # Project name: Reinforcement Learning Testbed for Power Consumption Optimization
 # This project is licensed under the MIT License, see LICENSE
 import shlex
+from cv2 import polarToCart
 
 from gym import Env
 from gym.utils import seeding
@@ -11,8 +12,12 @@ import gzip
 import shutil
 import numpy as np
 from argparse import ArgumentParser
+
+from pandas import array
 from gym_energyplus.envs.pipe_io import PipeIo
 from gym_energyplus.envs.energyplus_build_model import build_ep_model
+import tensorflow as tf
+from baselines.common.policies import PolicyWithValue
 
 class EnergyPlusEnv(Env):
     metadata = {'render.modes': ['human']}
@@ -111,9 +116,15 @@ class EnergyPlusEnv(Env):
         # This allow update of these files without affecting active simulation instances
         shutil.copy(self.model_file, output_dir)
         shutil.copy(weather_file, output_dir)
-        copy_model_file = output_dir + '/' + os.path.basename(self.model_file)
-        copy_weather_file = output_dir + '/' + os.path.basename(weather_file)
+        
+        # Train:
+        # copy_model_file = output_dir + '/' + os.path.basename(self.model_file)
+        # copy_weather_file = output_dir + '/' + os.path.basename(weather_file)
 
+        # Inferrence:
+        copy_model_file = os.path.basename(self.model_file)
+        copy_weather_file = os.path.basename(weather_file)
+        
         # Spawn a process
         cmd = self.energyplus_file \
               + ' -r ' \
@@ -316,11 +327,13 @@ def easy_agent(next_state):
     action = np.array([act_west, act_east, act_west, act_east])
     return action
 
-def test_easy(env, dir):
+def inferrence(env, agent, save_action_dir, RL_flag=False):
     C_emission_min = 100.
     C_emission_max = 0.
     C_emission_sum = 0.
     C_emission_count = 0
+    reward_sum = 0
+    reward_ave = 0
     next_state = env.reset()
     actions = []
     for i in range(1000000):
@@ -329,7 +342,14 @@ def test_easy(env, dir):
         #    print('Step {}'.format(i))
                 
         #action = env.action_space.sample()
-        action = agent(next_state)
+        action = None
+        if RL_flag:
+            next_state_reshape = tf.reshape(next_state, shape=[1, 6])
+            action_reshape = agent(next_state_reshape)
+            action = array([float(x) for x in list(action_reshape[0][0])])
+        else:
+            action = agent(next_state)
+        actions.append(action)
         C_emission = next_state[3]
         C_emission_sum += C_emission
         C_emission_min = min(C_emission, C_emission_min)
@@ -338,16 +358,27 @@ def test_easy(env, dir):
 
         next_state, reward, done, _ = env.step(action)
         C_emission_ave = C_emission_sum / C_emission_count
+        reward_sum += reward
+        reward_ave = reward_sum / C_emission_count
 
         if args.verbose:
             print('========= count={} C_emission={} C_emission_ave={} C_emission_min={} C_emission_max={}'.format(C_emission_count, C_emission, C_emission_ave, C_emission_min, C_emission_max))
-        #  if done:
-        #     break
+        if done:
+            break
     C_emission_ave = C_emission_sum / C_emission_count
     print('============================= Episodo done. count={} C_emission_ave={} C_emission_min={} C_emission_max={}'.format(C_emission_count, C_emission_ave, C_emission_min, C_emission_max))
+    print('============================= Episodo done. reward_sum={} reward_ave={}'.format(reward_sum, reward_ave))
     #env.close()
     env.plot()
-
+    
+    with open(save_action_dir, 'w') as fp:
+        for item in actions:
+            # write each item on a new line
+            fp.write(f"{item[0]}, {item[1]}, {item[2]}, {item[3]}\n")
+    print('Done')   
+    
+    
+    
 
 if __name__ == '__main__':
     args = parser()
@@ -374,7 +405,20 @@ if __name__ == '__main__':
     if env is None:
         quit()
 
-    if (args.simulate):
-        dir = ""
-        test_easy(env, dir)
+    easy_agent_save_action_dir = "/root/rl-testbed-for-energyplus/inferrence/easy_agent_action"
+    inferrence(env, easy_agent, easy_agent_save_action_dir)
+    
+    model_dir = "save_ckpts_1/save_ckpt-1"
+    policy_network_dir = "/root/rl-testbed-for-energyplus/save_policy_network"
+    value_network_dir = "/root/rl-testbed-for-energyplus/save_value_network"
+    
+    ac_space = env.action_space
+    load_policy_network = tf.keras.models.load_model(policy_network_dir)
+    load_value_network = tf.keras.models.load_model(value_network_dir)
+    new_p = PolicyWithValue(ac_space, load_policy_network, load_value_network)
+    new_ckpt = tf.train.Checkpoint(new_p)
+    new_ckpt.restore(model_dir)
+    
+    RL_agent_save_action_dir = "/root/rl-testbed-for-energyplus/inferrence/RL_agent_action"
+    inferrence(env, new_p.step, RL_agent_save_action_dir, True)
         

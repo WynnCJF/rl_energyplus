@@ -10,3 +10,5 @@ save_value_network/
 saved_ckpts/
 tmp.ipynb
 tmp2.ipynb
+log/*
+gym_energyplus/envs/log/*

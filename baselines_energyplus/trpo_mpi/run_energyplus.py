@@ -81,6 +81,10 @@ def train(env_id, num_timesteps, seed):
     # new_p = PolicyWithValue(ac_space, load_policy_network, load_value_network)
     # new_ckpt = tf.train.Checkpoint(new_p)
     # new_ckpt.restore(save_path)
+    
+    # tf.array(cur_state)
+    # action = new_p.step(cur_state)
+    # 
 
     env.close()
 
