@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # noinspection PyUnresolvedReferences
 import sys
+from matplotlib.pyplot import savefig
 
 from mpi4py import MPI
 from common.energyplus_util import (
@@ -14,6 +15,8 @@ import datetime
 from baselines import logger
 from baselines_energyplus.bench import Monitor
 import gym
+import tensorflow as tf
+from baselines.common.policies import PolicyWithValue
 
 
 def make_energyplus_env(env_id, seed):
@@ -62,7 +65,23 @@ def train(env_id, num_timesteps, seed):
                     #timesteps_per_batch=1*1024, max_kl=0.01, cg_iters=10, cg_damping=0.1,
                     timesteps_per_batch=16*1024, max_kl=0.01, cg_iters=10, cg_damping=0.1,
                     gamma=0.99, lam=0.98, vf_iters=5, vf_stepsize=1e-3)
-    policy.save("/root/rl-testbed-for-energyplus/model.pth")
+    # policy.save("/root/rl-testbed-for-energyplus/model.pth")
+    
+    # Save model
+    policy.policy_network.save("save_policy_network")
+    policy.value_network.save("save_value_network")
+    ckpt = tf.train.Checkpoint(policy)
+    save_path = ckpt.save("save_ckpts_1/save_ckpt")
+    print(save_path)
+
+    # Load model
+    # ac_space = env.action_space
+    # load_policy_network = tf.keras.models.load_model("save_policy_network")
+    # load_value_network = tf.keras.models.load_model("save_value_network")
+    # new_p = PolicyWithValue(ac_space, load_policy_network, load_value_network)
+    # new_ckpt = tf.train.Checkpoint(new_p)
+    # new_ckpt.restore(save_path)
+
     env.close()
 
 def main():
