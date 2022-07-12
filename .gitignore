@@ -1,2 +1,12 @@
 __pycache__
 .idea/
+.vscode/
+new_p_trainable+variables
+new_p_variables
+policy_trainable_variables
+policy_variables
+save_policy_network/
+save_value_network/
+saved_ckpts/
+tmp.ipynb
+tmp2.ipynb

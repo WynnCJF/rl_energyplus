@@ -108,7 +108,7 @@ class EnergyPlusModel2ZoneDataCenterHVAC_wEconomizer_Temp_Fan(EnergyPlusModel):
             temperature_trapezoid_weight = 0.1,
             fluctuation_weight = 0.0,
             PUE_weight = 0.0,
-            Whole_Building_Power_weight = 1 / 100000.0,
+            Whole_Building_Power_weight = 1 / 0.2754,
             raw_state = raw_state)
         
     def compute_reward_center23_5_gaussian1_0_trapezoid1_0_pue0_0(self, raw_state = None): # gaussian/trapezoid, PUE
@@ -202,9 +202,9 @@ class EnergyPlusModel2ZoneDataCenterHVAC_wEconomizer_Temp_Fan(EnergyPlusModel):
         Tz1 = st[1]
         Tz2 = st[2]
         PUE = st[3]
-        Whole_Building_Power = st[4]
-        IT_Equip_Power = st[5]
-        Whole_HVAC_Power = st[6]
+        Carbon_Equivalent = st[4]
+        CO_Emission = st[5]
+        CO2_Emission = st[6]
 
         rew_PUE = -(PUE - 1.0) * PUE_weight
         # Temp. gaussian
@@ -232,12 +232,12 @@ class EnergyPlusModel2ZoneDataCenterHVAC_wEconomizer_Temp_Fan(EnergyPlusModel):
         if raw_state is None:
             for cur, prev in zip(self.action, self.action_prev):
                 rew_fluct -= abs(cur - prev) * fluctuation_weight
-        rew_Whole_Building_Power = - Whole_Building_Power * Whole_Building_Power_weight
+        rew_Whole_Building_Power = - Carbon_Equivalent * Whole_Building_Power_weight
         rew = rew_temp_gaussian + rew_temp_trapezoid + rew_fluct + rew_PUE + rew_Whole_Building_Power
         if os.path.exists("/tmp/verbose"):
             print('compute_reward: rew={:7.3f} (temp_gaussian1={:7.3f}, temp_gaussian2={:7.3f}, temp_trapezoid1={:7.3f}, temp_trapezoid2={:7.3f}, fluct={:7.3f}, PUE={:7.3f}, Power={:7.3f})'.format(rew, rew_temp_gaussian1, rew_temp_gaussian2, rew_temp_trapezoid1, rew_temp_trapezoid2, rew_fluct, rew_PUE, rew_Whole_Building_Power))
         if os.path.exists("/tmp/verbose2"):
-            print('compute_reward: Tenv={:7.3f}, Tz1={:7.3f}, Tz2={:7.3f}, PUE={:7.3f}, Whole_Powerd2={:8.1f}, ITE_Power={:8.1f}, HVAC_Power={:8.1f}, Act1={:7.3f}, Act2={:7.3f}, Act3={:7.3f}, Act4={:7.3f}'.format(Tenv, Tz1, Tz2, PUE, Whole_Building_Power, IT_Equip_Power, Whole_HVAC_Power, self.action[0], self.action[1], self.action[2], self.action[3]))
+            print('compute_reward: Tenv={:7.3f}, Tz1={:7.3f}, Tz2={:7.3f}, PUE={:7.3f}, Whole_Powerd2={:8.1f}, ITE_Power={:8.1f}, HVAC_Power={:8.1f}, Act1={:7.3f}, Act2={:7.3f}, Act3={:7.3f}, Act4={:7.3f}'.format(Tenv, Tz1, Tz2, PUE, Carbon_Equivalent, CO_Emission, CO2_Emission, self.action[0], self.action[1], self.action[2], self.action[3]))
 
         return rew, (rew_temp_gaussian1, rew_temp_trapezoid1, rew_temp_gaussian2, rew_temp_trapezoid2, rew_Whole_Building_Power)
 
@@ -318,6 +318,11 @@ class EnergyPlusModel2ZoneDataCenterHVAC_wEconomizer_Temp_Fan(EnergyPlusModel):
         self.total_hvac_electric_demand_power = df[f'Whole Building:Facility Total HVAC {self.facility_power_output_var_suffix} [W](Hourly)']
         self.total_electric_demand_power = df[f'Whole Building:Facility Total {self.facility_power_output_var_suffix} [W](Hourly)']
 
+        # Carbon Emission
+        self.carbon_equivalent = df['Site:Environmental Impact Total CO2 Emissions Carbon Equivalent Mass [kg](Hourly)']
+        self.co_emission = df['Site:Environmental Impact Electricity CO Emissions Mass [kg](Hourly)']
+        self.co2_emission = df['Site:Environmental Impact Electricity CO2 Emissions Mass [kg](Hourly)']
+
         # Compute reward list
         self.rewards = []
         self.rewards_gaussian1 = []
@@ -326,15 +331,15 @@ class EnergyPlusModel2ZoneDataCenterHVAC_wEconomizer_Temp_Fan(EnergyPlusModel):
         self.rewards_trapezoid2 = []
         self.rewards_power = []
         
-        for Tenv, Tz1, Tz2, PUE, Whole_Building_Power, IT_Equip_Power, Whole_HVAC_Power in zip(
+        for Tenv, Tz1, Tz2, PUE, Carbon_Equivalent, CO_Emission, CO2_Emission in zip(
                 self.outdoor_temp,
                 self.westzone_temp,
                 self.eastzone_temp,
                 self.pue,
-                self.total_electric_demand_power,
-                self.total_building_electric_demand_power,
-                self.total_hvac_electric_demand_power):
-            rew, elem = self._compute_reward([Tenv, Tz1, Tz2, PUE, Whole_Building_Power, IT_Equip_Power, Whole_HVAC_Power])
+                self.carbon_equivalent,
+                self.co_emission,
+                self.co2_emission):
+            rew, elem = self._compute_reward([Tenv, Tz1, Tz2, PUE, Carbon_Equivalent, CO_Emission, CO2_Emission])
             self.rewards.append(rew)
             self.rewards_gaussian1.append(elem[0])
             self.rewards_trapezoid1.append(elem[1])

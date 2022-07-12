@@ -283,7 +283,11 @@ def parser():
                            help='Do plotting')
     return argparser.parse_args()
 
-def easy_agent(next_state, target, hi, lo):
+def easy_agent(next_state):
+    lo = 0.0
+    hi = 40.0
+    target = 23.0
+
     sensitivity_pos = 1.0
     sensitivity_neg = 1.0
     act_west_prev = 0
@@ -308,19 +312,46 @@ def easy_agent(next_state, target, hi, lo):
 
     act_west = max(lo, min(act_west, hi))
     act_east = max(lo, min(act_east, hi))
-    action = np.array([act_west, act_west, act_west, act_west, act_east, act_east, act_east, act_east])
+    # action = np.array([act_west, act_west, act_west, act_west, act_east, act_east, act_east, act_east])
+    action = np.array([act_west, act_east, act_west, act_east])
     return action
 
+def test_easy(env, dir):
+    C_emission_min = 100.
+    C_emission_max = 0.
+    C_emission_sum = 0.
+    C_emission_count = 0
+    next_state = env.reset()
+    actions = []
+    for i in range(1000000):
+        #if args.verbose:
+        #    os.system('clear')
+        #    print('Step {}'.format(i))
+                
+        #action = env.action_space.sample()
+        action = agent(next_state)
+        C_emission = next_state[3]
+        C_emission_sum += C_emission
+        C_emission_min = min(C_emission, C_emission_min)
+        C_emission_max = max(C_emission, C_emission_max)
+        C_emission_count += 1
+
+        next_state, reward, done, _ = env.step(action)
+        C_emission_ave = C_emission_sum / C_emission_count
+
+        if args.verbose:
+            print('========= count={} C_emission={} C_emission_ave={} C_emission_min={} C_emission_max={}'.format(C_emission_count, C_emission, C_emission_ave, C_emission_min, C_emission_max))
+        #  if done:
+        #     break
+    C_emission_ave = C_emission_sum / C_emission_count
+    print('============================= Episodo done. count={} C_emission_ave={} C_emission_min={} C_emission_max={}'.format(C_emission_count, C_emission_ave, C_emission_min, C_emission_max))
+    #env.close()
+    env.plot()
 
 
 if __name__ == '__main__':
-
     args = parser()
     print('args={}'.format(args))
-    
-    lo = 0.0
-    hi = 40.0
-    target = 23.0
     
     # obs[0]: Eronment:Site Outdoor Air Drybulb Temperature [C](TimeStep)
     # obs[1]: Workload level (not implemented yet)
@@ -344,35 +375,6 @@ if __name__ == '__main__':
         quit()
 
     if (args.simulate):
-        for ep in range(1):
-            PUE_min = 100.
-            PUE_max = 0.
-            PUE_sum = 0.
-            PUE_count = 0
-            next_state = env.reset()
-
-            for i in range(1000000):
-                #if args.verbose:
-                #    os.system('clear')
-                #    print('Step {}'.format(i))
-                    
-                #action = env.action_space.sample()
-                action = easy_agent(next_state, target, hi, lo)
-                PUE = next_state[3]
-                PUE_sum += PUE
-                PUE_min = min(PUE, PUE_min)
-                PUE_max = max(PUE, PUE_max)
-                PUE_count += 1
-
-                next_state, reward, done, _ = env.step(action)
-                PUE_ave = PUE_sum / PUE_count
-
-                if args.verbose:
-                    print('========= count={} PUE={} PUEave={} PUEmin={} PUEmax={}'.format(PUE_count, PUE, PUE_ave, PUE_min, PUE_max))
-                if done:
-                    break
-            PUE_ave = PUE_sum / PUE_count
-            print('============================= Episodo done. count={} PUEave={} PUEmin={} PUEmax={}'.format(PUE_count, PUE_ave, PUE_min, PUE_max))
-            #env.close()
-
-    env.plot()
+        dir = ""
+        test_easy(env, dir)
+        

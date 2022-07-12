@@ -56,12 +56,13 @@ def train(env_id, num_timesteps, seed):
 
     env = make_energyplus_env(env_id, workerseed)
 
-    trpo_mpi.learn(env=env,
-                   network=mlp(num_hidden=32, num_layers=2),
-                   total_timesteps=num_timesteps,
-                   #timesteps_per_batch=1*1024, max_kl=0.01, cg_iters=10, cg_damping=0.1,
-                   timesteps_per_batch=16*1024, max_kl=0.01, cg_iters=10, cg_damping=0.1,
-                   gamma=0.99, lam=0.98, vf_iters=5, vf_stepsize=1e-3)
+    policy = trpo_mpi.learn(env=env,
+                    network=mlp(num_hidden=32, num_layers=2),
+                    total_timesteps=num_timesteps,
+                    #timesteps_per_batch=1*1024, max_kl=0.01, cg_iters=10, cg_damping=0.1,
+                    timesteps_per_batch=16*1024, max_kl=0.01, cg_iters=10, cg_damping=0.1,
+                    gamma=0.99, lam=0.98, vf_iters=5, vf_stepsize=1e-3)
+    policy.save("/root/rl-testbed-for-energyplus/model.pth")
     env.close()
 
 def main():
