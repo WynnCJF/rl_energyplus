@@ -295,14 +295,14 @@ def parser():
     return argparser.parse_args()
 
 def easy_agent(next_state):
-    lo = 0.0
+    lo = 10.0
     hi = 40.0
-    target = 23.0
+    target = 23.5
 
     sensitivity_pos = 1.0
     sensitivity_neg = 1.0
-    act_west_prev = 0
-    act_east_prev = 0
+    act_west_prev = 23.5
+    act_east_prev = 23.5
     alpha = 0.4
 
     delta_west = next_state[1] - target
@@ -311,7 +311,7 @@ def easy_agent(next_state):
     else:
         act_west = target - delta_west * sensitivity_neg
     act_west = act_west * alpha + act_west_prev * (1 - alpha)
-    act_west_prev = act_west
+    # act_west_prev = act_west
     
     delta_east = next_state[2] - target
     if delta_east >= 0:
@@ -319,12 +319,21 @@ def easy_agent(next_state):
     else:
         act_east = target - delta_east * sensitivity_neg
     act_east = act_east * alpha + act_east_prev * (1 - alpha)
-    act_east_prev = act_east
+    # act_east_prev = act_east
 
     act_west = max(lo, min(act_west, hi))
     act_east = max(lo, min(act_east, hi))
+
+    act_west_prev = act_west
+    act_east_prev = act_east
+
+    # Nornalize action for Energyplus environment compatibility
+    norm_act_west = 2. * (act_west - lo) / (hi - lo) - 1.
+    norm_act_east = 2. * (act_east - lo) / (hi - lo) - 1.
+
+    
     # action = np.array([act_west, act_west, act_west, act_west, act_east, act_east, act_east, act_east])
-    action = np.array([act_west, act_east, act_west, act_east])
+    action = np.array([norm_act_west, norm_act_east, norm_act_west, norm_act_east])
     return action
 
 def inferrence(env, agent, save_action_dir, RL_flag=False):
@@ -408,17 +417,17 @@ if __name__ == '__main__':
     easy_agent_save_action_dir = "/root/rl-testbed-for-energyplus/inferrence/easy_agent_action"
     inferrence(env, easy_agent, easy_agent_save_action_dir)
     
-    model_dir = "save_ckpts_1/save_ckpt-1"
-    policy_network_dir = "/root/rl-testbed-for-energyplus/save_policy_network"
-    value_network_dir = "/root/rl-testbed-for-energyplus/save_value_network"
+    # model_dir = "save_ckpts_1/save_ckpt-1"
+    # policy_network_dir = "/root/rl-testbed-for-energyplus/save_policy_network"
+    # value_network_dir = "/root/rl-testbed-for-energyplus/save_value_network"
     
-    ac_space = env.action_space
-    load_policy_network = tf.keras.models.load_model(policy_network_dir)
-    load_value_network = tf.keras.models.load_model(value_network_dir)
-    new_p = PolicyWithValue(ac_space, load_policy_network, load_value_network)
-    new_ckpt = tf.train.Checkpoint(new_p)
-    new_ckpt.restore(model_dir)
+    # ac_space = env.action_space
+    # load_policy_network = tf.keras.models.load_model(policy_network_dir)
+    # load_value_network = tf.keras.models.load_model(value_network_dir)
+    # new_p = PolicyWithValue(ac_space, load_policy_network, load_value_network)
+    # new_ckpt = tf.train.Checkpoint(new_p)
+    # new_ckpt.restore(model_dir)
     
-    RL_agent_save_action_dir = "/root/rl-testbed-for-energyplus/inferrence/RL_agent_action"
-    inferrence(env, new_p.step, RL_agent_save_action_dir, True)
+    # RL_agent_save_action_dir = "/root/rl-testbed-for-energyplus/inferrence/RL_agent_action"
+    # inferrence(env, new_p.step, RL_agent_save_action_dir, True)
         
